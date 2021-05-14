@@ -55,10 +55,12 @@ char *workPath = ".";
 char *gatewayId = NULL;
 
 char *serverIp_ = "iot-mqtts.cn-north-4.myhuaweicloud.com";
+//int port_ = 1883;
 int port_ = 8883;
 
-char *username_ = "XXXXX"; //deviceId, The mqtt protocol requires the user name to be filled in. Here we use deviceId as the username
-char *password_ = "XXXXX";
+//char *username_ = "depot_2_master_zhangyi_test_1"; //deviceId, The mqtt protocol requires the user name to be filled in. Here we use deviceId as the username
+char *username_ = "609ddbe7aa3bcc02c02a901d_zhangyi_bloodmoon";
+char *password_ = "b011e18cda9ad5859c16";
 
 int disconnected_ = 0;
 
@@ -402,6 +404,97 @@ void Test_ReportDeviceInfo() {
 
 }
 
+
+void Test_zhangyi_PropertiesReport() {
+	int serviceNum = 2;  //reported services' totol count
+	ST_IOTA_SERVICE_DATA_INFO services[serviceNum];
+
+	//---------------the data of service1-------------------------------
+	char *service1 = "{\"buffer0\":\"6\"}";
+
+	services[0].event_time = GetEventTimesStamp(); //if event_time is set to NULL, the time will be the iot-platform's time.
+	services[0].service_id = "UPward";
+	services[0].properties = service1;
+
+	//---------------the data of service2-------------------------------
+	char *service2 = "{\"PhV_phsA\":\"9\",\"PhV_phsB\":\"8\"}";
+
+	services[1].event_time = NULL;
+	services[1].service_id = "analog";
+	services[1].properties = service2;
+
+	int messageId = IOTA_PropertiesReport(services, serviceNum, 0, NULL);
+	if (messageId != 0) {
+		PrintfLog(EN_LOG_LEVEL_ERROR, "device_demo: Test_PropertiesReport() failed, messageId %d\n", messageId);
+	}
+
+	MemFree(&services[0].event_time);
+}
+
+void TEST_report_upward_zhangyi(void)
+{
+	int serviceNum = 1;  //reported services' totol count
+	ST_IOTA_SERVICE_DATA_INFO services[serviceNum];
+
+	//---------------the data of service1-------------------------------
+	cJSON *tmp;
+	tmp = cJSON_CreateObject();
+	//cJSON *p_buffer0 = cJSON_CreateString("zhangyi 123456");
+	//cJSON_AddItemToObject(tmp, "buffer0", p_buffer0);
+	cJSON *p_buffer0 = cJSON_CreateObject();
+	cJSON_AddItemToObject(tmp, "buffer0", p_buffer0);
+
+	cJSON *zhong_duan = cJSON_CreateArray();
+	cJSON_AddItemToObject(p_buffer0, "zd", zhong_duan);
+	cJSON_AddItemToArray(zhong_duan, cJSON_CreateString("HIKVISION"));
+	cJSON_AddItemToArray(zhong_duan, cJSON_CreateString("sea"));
+	cJSON_AddItemToArray(zhong_duan, cJSON_CreateString("fire"));
+
+	cJSON *UPS = cJSON_CreateArray();
+	cJSON_AddItemToObject(p_buffer0, "ups", UPS);
+	cJSON *UPS_variables = cJSON_CreateObject();
+	cJSON_AddItemToArray(UPS, UPS_variables);
+	cJSON *p_mt = cJSON_CreateString("a");
+	cJSON_AddItemToObject(UPS_variables, "mt", p_mt);
+	cJSON *p_el = cJSON_CreateString("50%");
+	cJSON_AddItemToObject(UPS_variables, "el", p_el);
+
+	cJSON *zhu_ji = cJSON_CreateArray();
+	cJSON_AddItemToObject(p_buffer0, "z", zhu_ji);
+	cJSON *zhu_ji_variables = cJSON_CreateObject();
+	cJSON_AddItemToArray(zhu_ji, zhu_ji_variables);
+	cJSON *p_status = cJSON_CreateString("0x0001");
+	cJSON_AddItemToObject(zhu_ji_variables, "status", p_status);
+	cJSON *p_detect = cJSON_CreateArray();
+	cJSON_AddItemToObject(zhu_ji_variables, "detect", p_detect);
+	cJSON *zhu_ji_variables_1 = cJSON_CreateObject();
+	cJSON_AddItemToArray(p_detect, zhu_ji_variables_1);
+	cJSON *p_SN = cJSON_CreateString("000001");
+	cJSON_AddItemToObject(zhu_ji_variables_1, "sn", p_SN);
+	cJSON *p_status_1 = cJSON_CreateString("000001777");
+	cJSON_AddItemToObject(zhu_ji_variables_1, "status", p_status_1);
+	cJSON *zhu_ji_variables_2 = cJSON_CreateObject();
+	cJSON_AddItemToArray(p_detect, zhu_ji_variables_2);
+	cJSON *p_SN_2 = cJSON_CreateString("000002");
+	cJSON_AddItemToObject(zhu_ji_variables_2, "sn", p_SN_2);
+	cJSON *p_status_2 = cJSON_CreateString("000001779");
+	cJSON_AddItemToObject(zhu_ji_variables_2, "status", p_status_2);
+
+	//GetEventTimesStamp()函数使用了malloc，不建议使用。
+	services[0].event_time = GetEventTimesStamp(); //if event_time is set to NULL, the time will be the iot-platform's time.
+	services[0].service_id = "UPward";
+	//services[0].properties = service1;
+	//services[0].properties = tmp;
+	char *string_tmp = cJSON_Print(tmp);
+	services[0].properties = string_tmp;
+
+	int messageId = IOTA_PropertiesReport(services, serviceNum, 0, NULL);
+	if (messageId != 0) {
+		PrintfLog(EN_LOG_LEVEL_ERROR, "device_demo: Test_PropertiesReport() failed, messageId %d\n", messageId);
+	}
+
+	MemFree(&services[0].event_time);
+}
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -764,67 +857,94 @@ int main(int argc, char **argv) {
 	int ret = IOTA_Connect();
 	if (ret != 0) {
 		PrintfLog(EN_LOG_LEVEL_ERROR, "device_demo: IOTA_Auth() error, Auth failed, result %d\n", ret);
+	}else{
+		printf("zhangyi....%s(),line=%d  IOTA_Connect() is ok!\n", __func__, __LINE__);
 	}
 
 	TimeSleep(10500);
 	int count = 0;
 	while (count < 10000) {
 
+		printf("==================zhangyi....into one loop. count = %d\n", count);
+/*
+		printf("\n\nwill Test_ReportDeviceInfo\n\n");
 		//report device info
 		Test_ReportDeviceInfo();
 		TimeSleep(1500);
 
+		printf("\n\nwill IOTA_GetNTPTime()\n\n");
 		//NTP
 		IOTA_GetNTPTime(NULL);
 
 		TimeSleep(1500);
 
+		printf("\n\nwill IOTA_ReportDeviceLog()\n\n");
 		//report device log
 		long long timestamp = getTime();
 		char timeStampStr[14];
 		sprintf(timeStampStr,"%lld",timestamp);
 		IOTA_ReportDeviceLog("DEVICE_STATUS", "device log", timeStampStr, NULL);
 
+		printf("\n\nwill Test_MessageReport()\n\n");
 		//message up
 		Test_MessageReport();
 		
 		TimeSleep(1500);
 
+		printf("\n\nwill Test_PropertiesReport()\n\n");
 		//properties report
 		Test_PropertiesReport();
 		
 		TimeSleep(1500);
 
+		printf("\n\nwill Test_BatchPropertiesReport()\n\n");
 		//batchProperties report
 		Test_BatchPropertiesReport(NULL);
 
 		TimeSleep(1500);
-		
+	
+		printf("\n\nwill Test_CommandResponse()\n\n");	
 		//command response
 		Test_CommandResponse("1005");
 
 		TimeSleep(1500);
 
+		printf("\n\nwill Test_PropSetResponse()\n\n");
 		//propSetResponse
 		Test_PropSetResponse("1006");
 
 		TimeSleep(1500);
 
+		printf("\n\nwill Test_PropGetResponse()\n\n");
 		//propSetResponse
 		Test_PropGetResponse("1007");
 
 		TimeSleep(5500);
 
+		printf("\n\nwill IOTA_SubscribeUserTopic()\n\n");
 		IOTA_SubscribeUserTopic("devMsg");
 		
 		TimeSleep(1500);
 
+		printf("\n\nwill IOTA_GetDeviceShadow()\n\n");
 		//get device shadow
 		IOTA_GetDeviceShadow("1232", NULL, NULL, NULL);
 
+		TimeSleep(1500);
+		printf("\n\nwill Test_zhangyi_PropertiesReport()\n\n");
+		//properties report
+		Test_zhangyi_PropertiesReport();
+*/
+		TimeSleep(1500);
+		printf("\n\nwill TEST_report_upward_zhangyi()\n\n");
+		TEST_report_upward_zhangyi();
+
 		count++;
+
+		break;//zhangyi
 	}
 
+	printf("\nzhangyi----------out of report\n");
 	while (1) {
 		TimeSleep(50);
 	}
